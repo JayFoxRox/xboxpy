@@ -13,7 +13,6 @@ mov cr0, eax
 mov edx, [esp+8]        # Get communication address
 mov ebx, [edx+0]        # Get address
 mov ecx, [edx+4]        # Get operation
-mov eax, [edx+8]        # Data; Might need this for writes
 
 do_read_u8: # 1
 loop do_read_u16
@@ -29,22 +28,25 @@ mov eax, [ebx]
 
 do_write_u8: # 4
 loop do_write_u16
+mov al, [edx+8]
 mov [ebx], al
 
 do_write_u16: # 5
 loop do_write_u32
+mov ax, [edx+8]
 mov [ebx], ax
 
 do_write_u32: # 6
 loop do_call
+mov eax, [edx+8]
 mov [ebx], eax
 
 do_call:
 loop cleanup # 7
 pusha # Backup all vars
 mov [0x80010000], esp
-# eax = how many bytes follow at [edx+12]
-mov ecx, eax
+# [edx+8] = how many bytes follow at [edx+12]
+mov ecx, [edx+8]
 sub esp, ecx
 mov edi, esp
 lea esi, [edx+12]

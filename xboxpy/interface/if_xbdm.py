@@ -237,7 +237,7 @@ if True:
   xbdm_base = xbdm_module['base']
   DmResumeThread_addr = resolve_export(35, image_base=xbdm_base)
 
-  hack = "0F20C05025FFFFFEFF0F22C08B5424088B1A8B4A048B4208E2028A03E203668B03E2028B03E2028803E203668903E2028903E21F6089250000018089C129CC89E78D720CF3A4FFD38B25000001808944241C61894208580F22C0B80000DB02C2040090909090"
+  hack = "0F20C05025FFFFFEFF0F22C08B5424088B1A8B4A04E2028A03E203668B03E2028B03E2058A42088803E207668B4208668903E2058B42088903E220608925000001808B4A0829CC89E78D720CF3A4FFD38B25000001808944241C61894208580F22C0B80000DB02C20400"
   xbdm_command("setmem addr=0x" + format(DmResumeThread_addr, 'X') + " data=" + hack)
 
   #hack_bank = DmResumeThread_addr + (len(hack) // 2) # Put communication base behind the hack code [pretty shitty..]
@@ -248,29 +248,34 @@ if True:
   hacked = True
   print("Hack installed, bank at 0x" + format(hack_bank, '08X'))
 
-def xbdm_hack(address, operation, data=0):
-  SetMem(hack_bank, struct.pack("<III", address, operation, data))
-  xbdm_command("resume thread=0x" + format(hack_bank, 'X'))
+def xbdm_hack_do(address, operation, data=b''):
+  SetMem(hack_bank, struct.pack("<II", address, operation) + data)
+  return xbdm_command("resume thread=0x" + format(hack_bank, 'X'))
+
+def xbdm_hack_result():
   return GetMem(hack_bank + 8, 4)
 
 def xbdm_read_8(address):
-  return xbdm_hack(address, 1)
+  xbdm_hack_do(address, 1)
+  return xbdm_hack_result()
 def xbdm_read_16(address):
-  return xbdm_hack(address, 2)
+  xbdm_hack_do(address, 2)
+  return xbdm_hack_result()
 def xbdm_read_32(address):
-  return xbdm_hack(address, 3)
+  xbdm_hack_do(address, 3)
+  return xbdm_hack_result()
 
 def xbdm_write_8(address, data):
-  xbdm_hack(address, 4, int.from_bytes(data, byteorder='little', signed=False))
+  xbdm_hack_do(address, 4, data)
 def xbdm_write_16(address, data):
-  xbdm_hack(address, 5, int.from_bytes(data, byteorder='little', signed=False))
+  xbdm_hack_do(address, 5, data)
 def xbdm_write_32(address, data):
-  xbdm_hack(address, 6, int.from_bytes(data, byteorder='little', signed=False))
+  xbdm_hack_do(address, 6, data)
 
 def xbdm_call(address, stack):
   assert(len(stack) < 64)
-  SetMem(hack_bank + 12, stack)
-  return xbdm_hack(address, 7, len(stack))
+  xbdm_hack_do(address, 7, struct.pack("<I", len(stack)) + stack)
+  return xbdm_hack_result()
 
 def read2(address, size, physical):
   if physical:
